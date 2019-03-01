@@ -6,6 +6,7 @@ import (
 )
 
 func main() {
+	// take 
 	nodeID := os.Args[1]
 	server := network.NewServer(nodeID)
 

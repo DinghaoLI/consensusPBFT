@@ -41,14 +41,14 @@ func NewNode(nodeID string) *Node {
 		// Hard-coded for test.
 		NodeID: nodeID,
 		NodeTable: map[string]string{
-			"Apple": "localhost:1111",
-			"MS": "localhost:1112",
-			"Google": "localhost:1113",
-			"IBM": "localhost:1114",
+			"P1": "localhost:1111",
+			"P2": "localhost:1112",
+			"P3": "localhost:1113",
+			"P4": "localhost:1114",
 		},
 		View: &View{
 			ID: viewID,
-			Primary: "Apple",
+			Primary: "P1",
 		},
 
 		// Consensus-related struct
@@ -160,17 +160,17 @@ func (node *Node) GetPrePrepare(prePrepareMsg *consensus.PrePrepareMsg) error {
 		return err
 	}
 
-	prePareMsg, err := node.CurrentState.PrePrepare(prePrepareMsg)
+	prepareMsg, err := node.CurrentState.PrePrepare(prePrepareMsg)
 	if err != nil {
 		return err
 	}
 
-	if prePareMsg != nil {
+	if prepareMsg != nil {
 		// Attach node ID to the message
-		prePareMsg.NodeID = node.NodeID
+		prepareMsg.NodeID = node.NodeID
 
 		LogStage("Pre-prepare", true)
-		node.Broadcast(prePareMsg, "/prepare")
+		node.Broadcast(prepareMsg, "/prepare")
 		LogStage("Prepare", false)
 	}
 

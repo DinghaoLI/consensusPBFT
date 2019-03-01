@@ -57,6 +57,7 @@ func (state *State) StartConsensus(request *RequestMsg) (*PrePrepareMsg, error) 
 			sequenceID += 1
 		}
 	}
+	fmt.Println("SequenceID: ", sequenceID)
 
 	// Assign a new sequence ID to the request message object.
 	request.SequenceID = sequenceID
@@ -191,7 +192,7 @@ func (state *State) prepared() bool {
 		return false
 	}
 
-	if len(state.MsgLogs.PrepareMsgs) < 2*f {
+	if len(state.MsgLogs.PrepareMsgs) < 2*f-1 {
 		return false
 	}
 
