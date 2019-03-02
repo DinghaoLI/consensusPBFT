@@ -4,6 +4,41 @@
 
 ### How to build
 
+```shell
+$ cd $GOPATH/src/github.com/consensusPBFT/pbft
+$ go build
+```
+### How to Test
+
+4 nodes with 4 differents terminals:
+```
+T1
+$ ./pbft P1
+T2
+$ ./pbft P2
+T3
+$ ./pbft P3
+T4
+$ ./pbft P4
+```
+1 Client for receiving "Rely"
+
+```shell
+$ ./pbft Client
+```
+
+Then you can use curl to send a request like this
+
+```shell
+curl -H "Content-Type: applicaton/json" -X POST -d '{"clientID":"ahnhwi","operation":"GetMyName","timestamp":859384}' http://localhost:1111/req
+```
+
+### Working Screenshot
+
+#### n=4 f=0
+![](./screenshot2.png)
+#### n=4 f=1
+![](./screenshot1.png)
 
 
 ### Architecture
@@ -29,14 +64,6 @@ In this sample implementation, there is no client. So, every node including the 
 
 #### Code structure of the implementation
 ![](./pbft-consensus-architecture.png)
-
-### Working Screenshot
-
-#### n=4 f=0
-![](./screenshot2.png)
-#### n=4 f=1
-![](./screenshot1.png)
-
 
 
 ## License
