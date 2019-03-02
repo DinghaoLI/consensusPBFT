@@ -1,6 +1,11 @@
 # Sample implementation of various consensus algorithms
 
 ## PBFT
+
+### How to build
+
+
+
 ### Architecture
 #### Overall behavior (4 peers)
 ![](./pbft-consensus-behavior.jpg)
@@ -26,7 +31,13 @@ In this sample implementation, there is no client. So, every node including the 
 ![](./pbft-consensus-architecture.png)
 
 ### Working Screenshot
-![](./working-screenshot.png)
+
+#### n=4 f=0
+![](./screenshot2.png)
+#### n=4 f=1
+![](./screenshot1.png)
+
+
 
 ## License
 Apache 2.0

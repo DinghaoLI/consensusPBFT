@@ -2,7 +2,7 @@ package main
 
 import (
 	"os"
-	"github.com/bigpicturelabs/consensusPBFT/pbft/network"
+	"github.com/consensusPBFT/pbft/network"
 )
 
 func main() {
