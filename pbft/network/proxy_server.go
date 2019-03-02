@@ -15,9 +15,15 @@ type Server struct {
 
 func NewServer(nodeID string) *Server {
 	node := NewNode(nodeID)
-	server := &Server{node.NodeTable[nodeID], node}
+	var server *Server
+	if nodeID == "Client"{
+		server = &Server{node.Client, node}
+		server.setClient()
+	} else {
+		server = &Server{node.NodeTable[nodeID], node}
+		server.setRoute()
+	}
 
-	server.setRoute()
 
 	return server
 }
@@ -38,6 +44,10 @@ func (server *Server) setRoute() {
 	http.HandleFunc("/reply", server.getReply)
 }
 
+func (server *Server) setClient() {
+	http.HandleFunc("/reply", server.getReply)
+}
+
 func (server *Server) getReq(writer http.ResponseWriter, request *http.Request) {
 	var msg consensus.RequestMsg
 	err := json.NewDecoder(request.Body).Decode(&msg)
@@ -45,7 +55,7 @@ func (server *Server) getReq(writer http.ResponseWriter, request *http.Request) 
 		fmt.Println(err)
 		return
 	}
-
+	fmt.Println("Recv Req from http: ", msg)
 	server.node.MsgEntrance <- &msg
 }
 

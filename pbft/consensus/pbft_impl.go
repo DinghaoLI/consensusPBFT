@@ -18,6 +18,7 @@ type MsgLogs struct {
 	ReqMsg        *RequestMsg
 	PrepareMsgs   map[string]*VoteMsg
 	CommitMsgs    map[string]*VoteMsg
+	ReplyMsgs	  map[int64]bool
 }
 
 type Stage int
@@ -41,6 +42,7 @@ func CreateState(viewID int64, lastSequenceID int64) *State {
 			ReqMsg:nil,
 			PrepareMsgs:make(map[string]*VoteMsg),
 			CommitMsgs:make(map[string]*VoteMsg),
+			ReplyMsgs:make(map[int64]bool),
 		},
 		LastSequenceID: lastSequenceID,
 		CurrentStage: Idle,
@@ -147,6 +149,12 @@ func (state *State) Commit(commitMsg *VoteMsg) (*ReplyMsg, *RequestMsg, error) {
 
 		// Change the stage to prepared.
 		state.CurrentStage = Committed
+
+		// Rely only once for a Request
+		if state.MsgLogs.ReplyMsgs[commitMsg.SequenceID] == true{
+			return nil, nil, nil
+		}
+		state.MsgLogs.ReplyMsgs[commitMsg.SequenceID] = true
 
 		return &ReplyMsg{
 			ViewID: state.ViewID,

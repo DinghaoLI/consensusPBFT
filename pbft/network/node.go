@@ -12,6 +12,7 @@ type Node struct {
 	NodeID        string
 	NodeTable     map[string]string // key=nodeID, value=url
 	View          *View
+	Client        string
 	CurrentState  *consensus.State
 	CommittedMsgs []*consensus.RequestMsg // kinda block.
 	MsgBuffer     *MsgBuffer
@@ -50,6 +51,7 @@ func NewNode(nodeID string) *Node {
 			ID: viewID,
 			Primary: "P1",
 		},
+		Client: "localhost:1115",
 
 		// Consensus-related struct
 		CurrentState: nil,
@@ -62,8 +64,8 @@ func NewNode(nodeID string) *Node {
 		},
 
 		// Channels
-		MsgEntrance: make(chan interface{}),
-		MsgDelivery: make(chan interface{}),
+		MsgEntrance: make(chan interface{}, 4),
+		MsgDelivery: make(chan interface{}, 4),
 		Alarm: make(chan bool),
 	}
 
@@ -94,6 +96,7 @@ func (node *Node) Broadcast(msg interface{}, path string) map[string]error {
 		}
 
 		send(url + path, jsonMsg)
+		fmt.Println("I'm ", node.NodeID, " send prepare to ", nodeID)
 	}
 
 	if len(errorMap) == 0 {
@@ -115,8 +118,7 @@ func (node *Node) Reply(msg *consensus.ReplyMsg) error {
 		return err
 	}
 
-	// Client가 없으므로, 일단 Primary에게 보내는 걸로 처리.
-	send(node.NodeTable[node.View.Primary] + "/reply", jsonMsg)
+	send(node.Client + "/reply", jsonMsg)
 
 	return nil
 }
@@ -219,6 +221,8 @@ func (node *Node) GetCommit(commitMsg *consensus.VoteMsg) error {
 		LogStage("Commit", true)
 		node.Reply(replyMsg)
 		LogStage("Reply", true)
+		//fmt.Println("Reset State to nil")
+		//node.CurrentState.CurrentStage = 0
 	}
 
 	return nil
@@ -273,6 +277,7 @@ func (node *Node) routeMsg(msg interface{}) []error {
 	switch msg.(type) {
 	case *consensus.RequestMsg:
 		if node.CurrentState == nil {
+			fmt.Println("RequestMsg: node.CurrentState == nil")
 			// Copy buffered messages first.
 			msgs := make([]*consensus.RequestMsg, len(node.MsgBuffer.ReqMsgs))
 			copy(msgs, node.MsgBuffer.ReqMsgs)
@@ -286,10 +291,14 @@ func (node *Node) routeMsg(msg interface{}) []error {
 			// Send messages.
 			node.MsgDelivery <- msgs
 		} else {
+			fmt.Println("RequestMsg: node.CurrentState: ", node.CurrentState.CurrentStage)
 			node.MsgBuffer.ReqMsgs = append(node.MsgBuffer.ReqMsgs, msg.(*consensus.RequestMsg))
+			//fmt.Println("RequestMsg: node.MsgBuffer.ReqMsgs: ", node.MsgBuffer.ReqMsgs)
+
 		}
 	case *consensus.PrePrepareMsg:
 		if node.CurrentState == nil {
+			fmt.Println("PrePrepareMsg: node.CurrentState == nil")
 			// Copy buffered messages first.
 			msgs := make([]*consensus.PrePrepareMsg, len(node.MsgBuffer.PrePrepareMsgs))
 			copy(msgs, node.MsgBuffer.PrePrepareMsgs)
@@ -303,13 +312,23 @@ func (node *Node) routeMsg(msg interface{}) []error {
 			// Send messages.
 			node.MsgDelivery <- msgs
 		} else {
+			fmt.Println("PrePrepareMsg: node.CurrentState: ", node.CurrentState.CurrentStage)
 			node.MsgBuffer.PrePrepareMsgs = append(node.MsgBuffer.PrePrepareMsgs, msg.(*consensus.PrePrepareMsg))
+
 		}
 	case *consensus.VoteMsg:
 		if msg.(*consensus.VoteMsg).MsgType == consensus.PrepareMsg {
 			if node.CurrentState == nil || node.CurrentState.CurrentStage != consensus.PrePrepared {
+				if node.CurrentState == nil {
+					fmt.Println("PrepareMsg: node.CurrentState == nil")
+				} else {
+					fmt.Println("PrepareMsg: node.CurrentState == ", node.CurrentState.CurrentStage)
+				}
 				node.MsgBuffer.PrepareMsgs = append(node.MsgBuffer.PrepareMsgs, msg.(*consensus.VoteMsg))
+
 			} else {
+				fmt.Println("PrepareMsg: node.CurrentState == ", node.CurrentState.CurrentStage)
+
 				// Copy buffered messages first.
 				msgs := make([]*consensus.VoteMsg, len(node.MsgBuffer.PrepareMsgs))
 				copy(msgs, node.MsgBuffer.PrepareMsgs)
@@ -325,8 +344,16 @@ func (node *Node) routeMsg(msg interface{}) []error {
 			}
 		} else if msg.(*consensus.VoteMsg).MsgType == consensus.CommitMsg {
 			if node.CurrentState == nil || node.CurrentState.CurrentStage != consensus.Prepared {
+				if node.CurrentState == nil {
+					fmt.Println("CommitMsg: node.CurrentState == nil")
+				} else {
+					fmt.Println("CommitMsg: node.CurrentState == ", node.CurrentState.CurrentStage)
+				}
 				node.MsgBuffer.CommitMsgs = append(node.MsgBuffer.CommitMsgs, msg.(*consensus.VoteMsg))
+
 			} else {
+				fmt.Println("CommitMsg: node.CurrentState == ", node.CurrentState.CurrentStage)
+
 				// Copy buffered messages first.
 				msgs := make([]*consensus.VoteMsg, len(node.MsgBuffer.CommitMsgs))
 				copy(msgs, node.MsgBuffer.CommitMsgs)
@@ -393,6 +420,7 @@ func (node *Node) resolveMsg() {
 		msgs := <-node.MsgDelivery
 		switch msgs.(type) {
 		case []*consensus.RequestMsg:
+			fmt.Println("resolveMsg: ", msgs)
 			errs := node.resolveRequestMsg(msgs.([]*consensus.RequestMsg))
 			if len(errs) != 0 {
 				for _, err := range errs {
@@ -444,7 +472,7 @@ func (node *Node) alarmToDispatcher() {
 
 func (node *Node) resolveRequestMsg(msgs []*consensus.RequestMsg) []error {
 	errs := make([]error, 0)
-
+    fmt.Println("resolveRequestMsg: ", msgs)
 	// Resolve messages
 	for _, reqMsg := range msgs {
 		err := node.GetReq(reqMsg)
